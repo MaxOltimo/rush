@@ -1,0 +1,2 @@
+# rush
+Rapid Unix Shell
