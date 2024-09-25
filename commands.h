@@ -11,6 +11,8 @@ void ErrorHandler(int ErrorFlag);
 
 void EnterShell(void);
 
+void ExecuteCommand(char *command);
+
 
 
 

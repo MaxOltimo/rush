@@ -2,13 +2,8 @@
 
 int main(int argc, char *argv[]){
 
-
-    int ErrorFlag = 0;
-
     if(argc > 1){
-        ErrorFlag = -1;
-        ErrorHandler(ErrorFlag);
-
+        ErrorHandler(1);
     }
 
     EnterShell();
