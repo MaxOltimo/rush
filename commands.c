@@ -55,16 +55,33 @@ void ExecuteCommand(char *command){
    int numArgs =  CountArgs(command);
 
     char *args[numArgs + 1];
-    int i = 0;
+    int i = 1;
     char *token;
+    int setupFlag = 0;
+    int firstCommandLength = 0; /*ls, mkdir, sleep | This variable tracks the length of the initial command passed to rush so that it can be 
+    concatenated to /bin/
+    */
+
+    for (char *ptr = command; *ptr != ' ' && *ptr != '\0'; ptr++) {
+        firstCommandLength++;
+    }
+
+    args[0] = malloc(strlen("/bin/") + firstCommandLength + 1);//allocate memory for first command to be concatenated with /bin/
+
+    strcpy(args[0], "/bin/");
+
     while((token = strsep(&command, " ")) != NULL){
-        if(*token != '\0'){
+        if(*token != '\0' && setupFlag == 0){//Initial concatanation of first command with /bin/
+            strcat(args[0], token);
+            setupFlag++;
+        }
+        else{
             args[i] = token;
-            printf("%s\n", args[i]);
+            //printf("%s\n", args[i]);
             i++;
         }
     }
-    args[i] = NULL;
+    args[i] = NULL;//final element must be NULL terminated for execv() to work
 
     int rc = fork();
     if (rc < 0){ //fork failed
@@ -72,7 +89,7 @@ void ExecuteCommand(char *command){
     }
     else if(rc == 0){
         execv(args[0], args);
-        printf("child proccess might need work");
+        printf("child proccess might need work\n");
         ErrorHandler(0);
     }
     else{
@@ -81,7 +98,6 @@ void ExecuteCommand(char *command){
 
 
 }
-
 
 int CountArgs(char *command) {
     int count = 0;
