@@ -13,9 +13,7 @@ void EnterShell(void);
 
 void ExecuteCommand(char *command);
 
-
-
-
+int CountArgs(char *command);
 
 
 #endif
