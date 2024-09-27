@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 
 
 void ErrorHandler(int ErrorFlag);
@@ -15,5 +16,10 @@ void ExecuteCommand(char *command);
 
 int CountArgs(char *command);
 
+char *trimWhitespace(char *str);
+
+char **setupCommands(char *command);
+
+void changeDirectory(char **arguments);
 
 #endif
