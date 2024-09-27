@@ -54,8 +54,12 @@ void ExecuteCommand(char *command){
     char **args = setupCommands(command); 
 
     // Check if the command is 'cd'
-    if (strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) {
+    if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] == NULL) {
         changeDirectory(args);
+        return;
+    }
+    else if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] != NULL){
+        ErrorHandler(0);
         return;
     }
 
