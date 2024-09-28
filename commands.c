@@ -35,13 +35,15 @@ void EnterShell(void){
         buffer[strcspn(buffer, "\n")] = 0; // remove "\n" character from input
 
          // Process the command
+        /*
         if (strcmp(buffer, "exit") == 0) {
             exit(0);
         }
+        */
 
-        else{
+        //else{
             ExecuteCommand(buffer);
-        }
+         //}
 
     } while (1);
 
@@ -53,15 +55,9 @@ void ExecuteCommand(char *command){
 
     char **args = setupCommands(command); 
 
-    // Check if the command is 'cd'
-    if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] == NULL) {
-        changeDirectory(args);
-        return;
-    }
-    else if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] != NULL){
-        ErrorHandler(0);
-        return;
-    }
+    exitCommand(args);
+    changeDirectory(args);
+    
 
     int rc = fork();
     if (rc < 0){ //fork failed
@@ -74,7 +70,7 @@ void ExecuteCommand(char *command){
     }
     else{
         int wc = wait(NULL);
-    }
+        }
 
 }
 
@@ -116,6 +112,7 @@ char *trimWhitespace(char *str){
 char **setupCommands(char *command){
 
     command = trimWhitespace(command);//Removes leading and trailing whitespaces
+
     int numArgs =  CountArgs(command);//Counts arguments in command to properly allocate size for args array
 
     char **args = malloc((numArgs + 1) * sizeof(char *));
@@ -133,6 +130,8 @@ char **setupCommands(char *command){
     for (char *ptr = command; *ptr != ' ' && *ptr != '\0'; ptr++) {
         firstCommandLength++;
     }
+
+
 
     args[0] = malloc(strlen("/bin/") + firstCommandLength + 1);//allocate memory for first command to be concatenated with /bin/
     if (args[0] == NULL) {
@@ -160,7 +159,7 @@ char **setupCommands(char *command){
 
     else{
     
-        size_t size = strlen("user/bin/") + firstCommandLength + 1;
+        size_t size = strlen("/user/bin/") + firstCommandLength + 1;
 
         args[0] = realloc(args[0], size);
         if (args[0] == NULL) {
@@ -168,7 +167,7 @@ char **setupCommands(char *command){
             return NULL;
         }
 
-        strcpy(args[0], "user/bin/");
+        strcpy(args[0], "/user/bin/");
 
         while((token = strsep(&command, " ")) != NULL){
             if(*token != '\0' && setupFlag == 0){//Initial concatanation of first command with /bin/
@@ -189,19 +188,41 @@ char **setupCommands(char *command){
 
 }
 
-void changeDirectory(char **arguments){
+void changeDirectory(char **args){
 
-    if (arguments[1] == NULL) {
+        // Check if the command is 'cd'
+    if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] == NULL) {
+        if (args[1] == NULL) {
             ErrorHandler(0);
-    } 
-    else {
-        if (chdir(arguments[1]) != 0) {
+        } 
+        else 
+        {
+            if (chdir(args[1]) != 0) {
                 ErrorHandler(0);
             }
         }
+        
+    }
+    else if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] != NULL){
+        ErrorHandler(0);
+    }
     return; // Return early since 'cd' is handled
 
 }
+
+void exitCommand(char **args){
+        
+    if ((strcmp(args[0], "/user/bin/exit") == 0 || strcmp(args[0], "/bin/exit") == 0) && args[1] == NULL) {
+       exit(0); 
+    }
+    ErrorHandler(0);
+
+    return;
+
+}
+
+
+
 
 
 

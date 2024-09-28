@@ -20,6 +20,9 @@ char *trimWhitespace(char *str);
 
 char **setupCommands(char *command);
 
-void changeDirectory(char **arguments);
+void changeDirectory(char **args);
+
+void exitCommand(char **args);
+
 
 #endif
