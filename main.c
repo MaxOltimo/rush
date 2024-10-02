@@ -6,7 +6,10 @@ int main(int argc, char *argv[]){
         ErrorHandler(1);
     }
 
+    do{
     EnterShell();
+    }
+    while(1);
     
     return 0;
 }

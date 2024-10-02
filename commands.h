@@ -22,7 +22,7 @@ char **setupCommands(char *command);
 
 void changeDirectory(char **args);
 
-void exitCommand(char **args);
+void exitCommand(char *command);
 
 
 #endif

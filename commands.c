@@ -8,7 +8,7 @@ void ErrorHandler(int eFlag){
     exit(1);
     }
     else if  (eFlag == 0){ //Normal error handling will continue running
-    char error_message[30] = "An error has occurred\n";
+    char error_message[30] = "AN Error has occurred 0\n";
     write(STDERR_FILENO, error_message, strlen(error_message));
     return;
 
@@ -21,57 +21,55 @@ void EnterShell(void){
     size_t bufferSize = 0;
     int nread;
 
-    do
-    {
+    //do
+   //{
         printf("rush> ");
         nread = getline(&buffer, &bufferSize, stdin);
 
+        
         if (nread == -1) {
         // Handle input error or EOF
         ErrorHandler(0);
-        continue;
+        //continue;
         }
+        
 
         buffer[strcspn(buffer, "\n")] = 0; // remove "\n" character from input
 
          // Process the command
-        /*
-        if (strcmp(buffer, "exit") == 0) {
-            exit(0);
+
+        buffer = trimWhitespace(buffer); // Removes leading and trailing whitespaces
+        
+        if (strncmp(buffer, "exit", 4) == 0) {
+            exitCommand(buffer);
+            //break;
         }
-        */
-
-        //else{
+        else{
             ExecuteCommand(buffer);
-         //}
+         }
 
-    } while (1);
+    //} while (1);
 
     free(buffer);
 
 }
 
-void ExecuteCommand(char *command){
+void ExecuteCommand(char *command) {
 
-    char **args = setupCommands(command); 
-
-    exitCommand(args);
-    changeDirectory(args);
-    
+    char **args = setupCommands(command);
+    //changeDirectory(args);
 
     int rc = fork();
-    if (rc < 0){ //fork failed
+    if (rc < 0) { // fork failed
+        perror("fork failed");
         ErrorHandler(0);
-    }
-    else if(rc == 0){
+    } else if (rc == 0) { // child process
         execv(args[0], args);
-        //printf("child proccess might need work\n");
-        exit(1);
-    }
-    else{
+        perror("execv failed");
+        exit(1); // Terminate the child process with a non-zero status
+    } else {
         int wc = wait(NULL);
-        }
-
+    }
 }
 
 int CountArgs(char *command) {
@@ -109,11 +107,9 @@ char *trimWhitespace(char *str){
 
 }
 
-char **setupCommands(char *command){
+char **setupCommands(char *command) {
 
-    command = trimWhitespace(command);//Removes leading and trailing whitespaces
-
-    int numArgs =  CountArgs(command);//Counts arguments in command to properly allocate size for args array
+    int numArgs = CountArgs(command); // Counts arguments in command to properly allocate size for args array
 
     char **args = malloc((numArgs + 1) * sizeof(char *));
     if (args == NULL) {
@@ -123,43 +119,33 @@ char **setupCommands(char *command){
     int i = 1;
     char *token;
     int setupFlag = 0;
-    int firstCommandLength = 0; /*ls, mkdir, sleep | This variable tracks the length of the initial command passed to rush so that it can be 
-    concatenated to /bin/
-    */
+    int firstCommandLength = 0;
 
     for (char *ptr = command; *ptr != ' ' && *ptr != '\0'; ptr++) {
         firstCommandLength++;
     }
 
-
-
-    args[0] = malloc(strlen("/bin/") + firstCommandLength + 1);//allocate memory for first command to be concatenated with /bin/
+    args[0] = malloc(strlen("/bin/") + firstCommandLength + 1); // allocate memory for first command to be concatenated with /bin/
     if (args[0] == NULL) {
         free(args);
         return NULL;
     }
 
     strcpy(args[0], "/bin/");
+    strncat(args[0], command, firstCommandLength);
 
-    if(access(args[0], X_OK) == 0){
-
-    while((token = strsep(&command, " ")) != NULL){
-        if(*token != '\0' && setupFlag == 0){//Initial concatanation of first command with /bin/
-            strcat(args[0], token);
-            setupFlag++;
+    if (access(args[0], X_OK) == 0) {
+        while ((token = strsep(&command, " ")) != NULL) {
+            if (*token != '\0' && setupFlag == 0) { // Initial concatenation of first command with /bin/
+                setupFlag++;
+            } else {
+                args[i] = token;
+                i++;
+            }
         }
-        else{
-            args[i] = token;
-            //printf("%s\n", args[i]);
-            i++;
-        }
-            args[i] = NULL;//final element must be NULL terminated for execv() to work
-        }
-    }
-
-    else{
-    
-        size_t size = strlen("/user/bin/") + firstCommandLength + 1;
+        args[i] = NULL; // final element must be NULL terminated for execv() to work
+    } else {
+        size_t size = strlen("/usr/bin/") + firstCommandLength + 1;
 
         args[0] = realloc(args[0], size);
         if (args[0] == NULL) {
@@ -167,58 +153,70 @@ char **setupCommands(char *command){
             return NULL;
         }
 
-        strcpy(args[0], "/user/bin/");
+        strcpy(args[0], "/usr/bin/");
+        strncat(args[0], command, firstCommandLength);
 
-        while((token = strsep(&command, " ")) != NULL){
-            if(*token != '\0' && setupFlag == 0){//Initial concatanation of first command with /bin/
-                strcat(args[0], token);
+        while ((token = strsep(&command, " ")) != NULL) {
+            if (*token != '\0' && setupFlag == 0) { // Initial concatenation of first command with /usr/bin/
                 setupFlag++;
-            }
-            else{
+            } else {
                 args[i] = token;
-                //printf("%s\n", args[i]);
                 i++;
             }
-                args[i] = NULL;//final element must be NULL terminated for execv() to work
-            }
-
+        }
+        args[i] = NULL; // final element must be NULL terminated for execv() to work
     }
 
     return args;
-
 }
 
-void changeDirectory(char **args){
-
-        // Check if the command is 'cd'
-    if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] == NULL) {
+void changeDirectory(char **args) {
+    if ((strcmp(args[0], "/usr/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] == NULL) {
         if (args[1] == NULL) {
+            printf("No directory specified\n");
             ErrorHandler(0);
-        } 
-        else 
-        {
+        } else {
             if (chdir(args[1]) != 0) {
+                perror("chdir failed");
                 ErrorHandler(0);
             }
         }
-        
-    }
-    else if ((strcmp(args[0], "/user/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] != NULL){
+    } else if ((strcmp(args[0], "/usr/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] != NULL) {
+        printf("Too many arguments for cd\n");
         ErrorHandler(0);
     }
-    return; // Return early since 'cd' is handled
-
 }
 
-void exitCommand(char **args){
-        
-    if ((strcmp(args[0], "/user/bin/exit") == 0 || strcmp(args[0], "/bin/exit") == 0) && args[1] == NULL) {
-       exit(0); 
+void exitCommand(char *command) {
+    command = trimWhitespace(command); // Removes leading and trailing whitespaces
+
+    int numArgs = CountArgs(command); // Counts arguments in command to properly allocate size for args array
+
+    char **args = malloc((numArgs + 1) * sizeof(char *));
+    if (args == NULL) {
+        ErrorHandler(0);
+        return;
     }
+
+    int i = 0;
+    char *token;
+    while ((token = strsep(&command, " ")) != NULL) {
+        if (*token != '\0') { // Skip empty tokens
+            args[i] = token;
+            i++;
+        }
+    }
+    args[i] = NULL; // Null-terminate the array
+
+    if ((strcmp(args[0], "exit") == 0) && args[1] == NULL) {
+        free(args);
+        exit(0);
+    }
+
+    printf("Invalid usage of exit\n");
     ErrorHandler(0);
 
-    return;
-
+    free(args);
 }
 
 
