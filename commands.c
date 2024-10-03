@@ -44,6 +44,16 @@ void EnterShell(void){
             exitCommand(buffer);
             //break;
         }
+
+        else if(strncmp(buffer, "cd", 2) == 0){
+            char **args = setupCommands(buffer);
+            changeDirectory(args);
+            for (int i = 0; args[i] != NULL; i++) {
+                free(args[i]);
+            }
+
+            free(args);
+        }
         else{
             ExecuteCommand(buffer);
          }

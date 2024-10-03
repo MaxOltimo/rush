@@ -7,6 +7,9 @@
 #include <string.h>
 #include <ctype.h>
 
+char **searchPaths = NULL;
+int numPaths = 0;
+
 
 void ErrorHandler(int ErrorFlag);
 
