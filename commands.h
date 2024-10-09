@@ -6,9 +6,10 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <fcntl.h>
 
-char **searchPaths = NULL;
-int numPaths = 0;
+char **searchPaths;
+int numPaths;
 
 
 void ErrorHandler(int ErrorFlag);
@@ -26,6 +27,8 @@ char **setupCommands(char *command);
 void changeDirectory(char **args);
 
 void exitCommand(char *command);
+
+void pathCommand(char *command);
 
 
 #endif

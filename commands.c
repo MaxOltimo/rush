@@ -54,36 +54,67 @@ void EnterShell(void){
 
             free(args);
         }
+
+        else if (strncmp(buffer, "path", 4) == 0) {
+            pathCommand(buffer + 5);
+        }
         else{
             ExecuteCommand(buffer);
          }
 
     //} while (1);
 
-    free(buffer);
+    //free(buffer);
 
 }
 
 void ExecuteCommand(char *command) {
 
     char **args = setupCommands(command);
+    int outputRedirect = 0;
+    char *outputFile = NULL;
     //changeDirectory(args);
+
+ for (int i = 0; args[i] != NULL; i++) {
+        if (strcmp(args[i], ">") == 0) {
+            outputRedirect = 1;
+            outputFile = args[i + 1];
+            args[i] = NULL;  
+        }
+        else if (strcmp(args[i], ">>") == 0){
+            ErrorHandler(0);
+        }
+ }
 
     int rc = fork();
     if (rc < 0) { // fork failed
         perror("fork failed");
         ErrorHandler(0);
     } else if (rc == 0) { // child process
+        if (outputRedirect) {
+            int fd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            if (fd < 0) {
+                perror("open");
+                exit(1);
+            }
+            dup2(fd, STDOUT_FILENO);
+            close(fd);
+        }
+
         execv(args[0], args);
         perror("execv failed");
         exit(1); // Terminate the child process with a non-zero status
     } else {
         int wc = wait(NULL);
     }
+    for (int i = 0; args[i] != NULL; i++) {
+        free(args[i]);
+    }
+    free(args);
+
 }
 
 int CountArgs(char *command) {
-
 
     int count = 0;
     char *temp = strdup(command); // Duplicate the command string to avoid modifying the original
@@ -103,13 +134,13 @@ int CountArgs(char *command) {
 char *trimWhitespace(char *str){
     char *end;
 
-    while (isspace((char unsigned)*str)) str++;
+    while (isspace((unsigned char)*str)) str++;
 
     if(*str ==0)
         return str;
 
     end = str + strlen(str) - 1;
-    while (end > str && isspace((char unsigned)*end)) end--;
+    while (end > str && isspace((unsigned char)*end)) end--;
 
     *(end + 1) = '\0';
 
@@ -118,70 +149,50 @@ char *trimWhitespace(char *str){
 }
 
 char **setupCommands(char *command) {
+    command = trimWhitespace(command);
 
-    int numArgs = CountArgs(command); // Counts arguments in command to properly allocate size for args array
+    int numArgs = CountArgs(command);
 
     char **args = malloc((numArgs + 1) * sizeof(char *));
     if (args == NULL) {
         return NULL;
     }
 
-    int i = 1;
+    int i = 0;
     char *token;
-    int setupFlag = 0;
-    int firstCommandLength = 0;
-
-    for (char *ptr = command; *ptr != ' ' && *ptr != '\0'; ptr++) {
-        firstCommandLength++;
-    }
-
-    args[0] = malloc(strlen("/bin/") + firstCommandLength + 1); // allocate memory for first command to be concatenated with /bin/
-    if (args[0] == NULL) {
-        free(args);
-        return NULL;
-    }
-
-    strcpy(args[0], "/bin/");
-    strncat(args[0], command, firstCommandLength);
-
-    if (access(args[0], X_OK) == 0) {
-        while ((token = strsep(&command, " ")) != NULL) {
-            if (*token != '\0' && setupFlag == 0) { // Initial concatenation of first command with /bin/
-                setupFlag++;
-            } else {
-                args[i] = token;
-                i++;
-            }
+    while ((token = strsep(&command, " ")) != NULL) {
+        if (*token != '\0') {
+            args[i] = strdup(token);
+            i++;
         }
-        args[i] = NULL; // final element must be NULL terminated for execv() to work
-    } else {
-        size_t size = strlen("/usr/bin/") + firstCommandLength + 1;
+    }
+    args[i] = NULL;
 
-        args[0] = realloc(args[0], size);
-        if (args[0] == NULL) {
-            free(args);
+    // Search for the executable in the search paths
+    for (int j = 0; j < numPaths; j++) {
+        char *path = malloc(strlen(searchPaths[j]) + strlen(args[0]) + 2);
+        if (path == NULL) {
+            ErrorHandler(0);
             return NULL;
         }
+        strcpy(path, searchPaths[j]);
+        strcat(path, "/");
+        strcat(path, args[0]);
 
-        strcpy(args[0], "/usr/bin/");
-        strncat(args[0], command, firstCommandLength);
-
-        while ((token = strsep(&command, " ")) != NULL) {
-            if (*token != '\0' && setupFlag == 0) { // Initial concatenation of first command with /usr/bin/
-                setupFlag++;
-            } else {
-                args[i] = token;
-                i++;
-            }
+        if (access(path, X_OK) == 0) {
+            free(args[0]);
+            args[0] = path;
+            return args;
         }
-        args[i] = NULL; // final element must be NULL terminated for execv() to work
+        free(path);
     }
 
+    // If the executable is not found in the search paths, return the original args
     return args;
 }
 
 void changeDirectory(char **args) {
-    if ((strcmp(args[0], "/usr/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] == NULL) {
+    if ((strcmp(args[0], "cd") == 0) && args[2] == NULL) {
         if (args[1] == NULL) {
             printf("No directory specified\n");
             ErrorHandler(0);
@@ -191,14 +202,14 @@ void changeDirectory(char **args) {
                 ErrorHandler(0);
             }
         }
-    } else if ((strcmp(args[0], "/usr/bin/cd") == 0 || strcmp(args[0], "/bin/cd") == 0) && args[2] != NULL) {
+    } else if ((strcmp(args[0], "cd") == 0) && args[2] != NULL) {
         printf("Too many arguments for cd\n");
         ErrorHandler(0);
     }
 }
 
 void exitCommand(char *command) {
-    command = trimWhitespace(command); // Removes leading and trailing whitespaces
+    //command = trimWhitespace(command); // Removes leading and trailing whitespaces
 
     int numArgs = CountArgs(command); // Counts arguments in command to properly allocate size for args array
 
@@ -212,25 +223,67 @@ void exitCommand(char *command) {
     char *token;
     while ((token = strsep(&command, " ")) != NULL) {
         if (*token != '\0') { // Skip empty tokens
-            args[i] = token;
+            args[i] = strdup(token); // Duplicate the token
+            if (args[i] == NULL) {
+                ErrorHandler(0);
+                return;
+            }
             i++;
         }
     }
     args[i] = NULL; // Null-terminate the array
 
     if ((strcmp(args[0], "exit") == 0) && args[1] == NULL) {
-        free(args);
+        for (int j = 0; args[j] != NULL; j++) {
+            free(args[j]); // Free each duplicated token
+        }
+        free(args); // Free the args array itself
         exit(0);
     }
 
     printf("Invalid usage of exit\n");
     ErrorHandler(0);
 
-    free(args);
+    for (int j = 0; args[j] != NULL; j++) {
+        free(args[j]); // Free each duplicated token
+    }
+    free(args); // Free the args array itself
 }
 
+void pathCommand(char *command) {
+    // Free the old search paths
+    if (searchPaths != NULL) {
+        for (int i = 0; i < numPaths; i++) {
+            free(searchPaths[i]);
+        }
+        free(searchPaths);
+    }
 
+    // Count the number of new paths
+    numPaths = CountArgs(command);
 
+    // Allocate memory for the new search paths
+    searchPaths = malloc((numPaths + 1) * sizeof(char *));
+    if (searchPaths == NULL) {
+        ErrorHandler(0);
+        return;
+    }
+
+    // Tokenize the command to extract the paths
+    int i = 0;
+    char *token;
+    while ((token = strsep(&command, " ")) != NULL) {
+        if (*token != '\0') {
+            searchPaths[i] = strdup(token);
+            if (searchPaths[i] == NULL) {
+                ErrorHandler(0);
+                return;
+            }
+            i++;
+        }
+    }
+    searchPaths[i] = NULL; // Null-terminate the array
+}
 
 
 
