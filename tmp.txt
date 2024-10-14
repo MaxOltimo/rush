@@ -1,0 +1,8 @@
+README.md
+commands.c
+commands.h
+dog
+main.c
+rush
+tmp.txt
+zipper

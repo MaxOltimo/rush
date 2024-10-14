@@ -8,7 +8,7 @@ void ErrorHandler(int eFlag){
     exit(1);
     }
     else if  (eFlag == 0){ //Normal error handling will continue running
-    char error_message[30] = "AN Error has occurred 0\n";
+    char error_message[30] = "An Error has occurred\n";
     write(STDERR_FILENO, error_message, strlen(error_message));
     return;
 
@@ -19,19 +19,20 @@ void ErrorHandler(int eFlag){
 void EnterShell(void){
     char *buffer = NULL;
     size_t bufferSize = 0;
-    int nread;
+    //int nread;
 
     //do
    //{
         printf("rush> ");
-        nread = getline(&buffer, &bufferSize, stdin);
+        //nread = 
+        getline(&buffer, &bufferSize, stdin);
 
-        
+        /*
         if (nread == -1) {
         // Handle input error or EOF
         ErrorHandler(0);
         //continue;
-        }
+        }*/
         
 
         buffer[strcspn(buffer, "\n")] = 0; // remove "\n" character from input
@@ -59,7 +60,24 @@ void EnterShell(void){
             pathCommand(buffer + 5);
         }
         else{
-            ExecuteCommand(buffer);
+            if (strchr(buffer, '&') != NULL) {
+                // Split the buffer into commands based on '&'
+                char *command = strtok(buffer, "&");
+                while (command != NULL) {
+                    ExecuteCommand(command);
+                    command = strtok(NULL, "&");
+                }
+
+                // Wait for all child processes
+                while (wait(NULL) > 0);
+            } else {
+                // No '&' present, execute the command normally
+                if(buffer[0] == '\0') return;
+                ExecuteCommand(buffer);
+                // Wait for the single child process to complete
+                wait(NULL);
+            }
+        
          }
 
     //} while (1);
@@ -75,26 +93,37 @@ void ExecuteCommand(char *command) {
     char *outputFile = NULL;
     //changeDirectory(args);
 
- for (int i = 0; args[i] != NULL; i++) {
+    for (int i = 0; args[i] != NULL; i++) {
         if (strcmp(args[i], ">") == 0) {
+            if (outputRedirect) {
+                // Multiple redirection operators detected
+                ErrorHandler(0);
+                return;
+            }
             outputRedirect = 1;
             outputFile = args[i + 1];
-            args[i] = NULL;  
-        }
-        else if (strcmp(args[i], ">>") == 0){
+            if (outputFile == NULL || args[i + 2] != NULL) {
+                // No file specified or multiple arguments to the right of the redirection sign
+                ErrorHandler(0);
+                return;
+            }
+            args[i] = NULL;
+        } else if (strcmp(args[i], ">>") == 0) {
+            // ">>" is an error
             ErrorHandler(0);
+            return;
         }
- }
+    }
 
     int rc = fork();
     if (rc < 0) { // fork failed
-        perror("fork failed");
+        //perror("fork failed");
         ErrorHandler(0);
     } else if (rc == 0) { // child process
         if (outputRedirect) {
             int fd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
             if (fd < 0) {
-                perror("open");
+                //perror("open");
                 exit(1);
             }
             dup2(fd, STDOUT_FILENO);
@@ -102,11 +131,11 @@ void ExecuteCommand(char *command) {
         }
 
         execv(args[0], args);
-        perror("execv failed");
+        //perror("execv failed");
         exit(1); // Terminate the child process with a non-zero status
-    } else {
-        int wc = wait(NULL);
-    }
+    } //else {
+      //  int wc = wait(NULL);
+    //}
     for (int i = 0; args[i] != NULL; i++) {
         free(args[i]);
     }
@@ -192,18 +221,18 @@ char **setupCommands(char *command) {
 }
 
 void changeDirectory(char **args) {
-    if ((strcmp(args[0], "cd") == 0) && args[2] == NULL) {
+    if ((strcmp(args[0], "cd") == 0)) {
         if (args[1] == NULL) {
-            printf("No directory specified\n");
+            //printf("No directory specified\n");
             ErrorHandler(0);
         } else {
             if (chdir(args[1]) != 0) {
-                perror("chdir failed");
+                //perror("chdir failed");
                 ErrorHandler(0);
             }
         }
     } else if ((strcmp(args[0], "cd") == 0) && args[2] != NULL) {
-        printf("Too many arguments for cd\n");
+        //printf("Too many arguments for cd\n");
         ErrorHandler(0);
     }
 }
@@ -241,7 +270,7 @@ void exitCommand(char *command) {
         exit(0);
     }
 
-    printf("Invalid usage of exit\n");
+    //printf("Invalid usage of exit\n");
     ErrorHandler(0);
 
     for (int j = 0; args[j] != NULL; j++) {
