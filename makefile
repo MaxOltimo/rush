@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -Wall -Wextra -std=c99
+CFLAGS = -Wall 
 
 # Source files
 SRCS = main.c commands.c
@@ -20,16 +20,16 @@ TARGET = rush
 all: $(TARGET)
 
 # Rule to build the target executable
-$(TARGET): $(OBJS)
-    $(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+$(TARGET):	$(OBJS)
+	$(CC)	$(CFLAGS)	-o	$(TARGET)	$(OBJS)
 
 # Rule to build object files
 %.o: %.c $(HDRS)
-    $(CC) $(CFLAGS) -c $< -o $@
+	$(CC)	$(CFLAGS)	-c	$<	-o	$@
 
 # Clean up build files
 clean:
-    rm -f $(OBJS) $(TARGET)
+	rm	-f	$(OBJS)	$(TARGET)
 
 # Phony targets
 .PHONY: all clean

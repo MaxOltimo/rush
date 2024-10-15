@@ -7,9 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
-
-char **searchPaths;
-int numPaths;
+#include <sys/wait.h>
 
 
 void ErrorHandler(int ErrorFlag);
@@ -29,6 +27,10 @@ void changeDirectory(char **args);
 void exitCommand(char *command);
 
 void pathCommand(char *command);
+
+//void printSearchPaths(void);
+
+void initializeSearchPaths(void);
 
 
 #endif

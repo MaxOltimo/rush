@@ -6,6 +6,8 @@ int main(int argc, char *argv[]){
         ErrorHandler(1);
     }
 
+    initializeSearchPaths();
+
     do{
     EnterShell();
     }
